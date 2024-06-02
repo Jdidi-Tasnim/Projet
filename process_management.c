@@ -27,11 +27,19 @@ void child_process() {
 
     sem_wait(semaphore);
 
+    printf("Child process %d started\n", getpid());
+    fflush(stdout);
+
     // Simulate complex task
+    printf("Child process %d performing a complex task...\n", getpid());
+    fflush(stdout);
     sleep(5);
 
     // Send confirmation signal to parent
     kill(getppid(), SIGUSR1);
+
+    printf("Child process %d completed\n", getpid());
+    fflush(stdout);
 
     exit(0);
 }
@@ -45,6 +53,9 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    printf("Parent process started\n");
+    fflush(stdout);
+
     for (int i = 0; i < NUM_CHILDREN; i++) {
         pid[i] = fork();
         if (pid[i] < 0) {
@@ -55,14 +66,22 @@ int main() {
         }
     }
 
+    printf("Parent process is waiting for all children to be ready\n");
+    fflush(stdout);
+
+    // Wait for all child processes to be ready
+    for (int i = 0; i < NUM_CHILDREN; i++) {
+        printf("Parent process is waiting for child process %d\n", pid[i]);
+        fflush(stdout);
+        sem_post(semaphore);
+    }
+
+    printf("Parent process is signaling all children to start their tasks\n");
+    fflush(stdout);
+
     // Send start signal to children
     for (int i = 0; i < NUM_CHILDREN; i++) {
         kill(pid[i], SIGUSR1);
-    }
-
-    // Release semaphore
-    for (int i = 0; i < NUM_CHILDREN; i++) {
-        sem_post(semaphore);
     }
 
     // Wait for children to finish
@@ -70,8 +89,15 @@ int main() {
         wait(NULL);
     }
 
+    printf("All child processes have completed their tasks\n");
+    fflush(stdout);
+
     sem_close(semaphore);
     sem_unlink("/semaphore");
 
+    printf("Parent process finished\n");
+    fflush(stdout);
+
     return 0;
 }
+
